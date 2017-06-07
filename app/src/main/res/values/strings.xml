@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">BWMonitor</string>
+    <string name="action_settings">Settings</string>
+    <string name="datafeeds">Datafeeds</string>
+    <string name="datafeed_source_url_hint">Datafeed Source URL</string>
+    <string name="update_text">Update</string>
+    <string-array name="datafeed_sources">
+        <item>bwmon.ncsa.illinois.edu/metriccharts/api/datafeeds</item>
+    </string-array>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="section_format">Hello World from section: %1$d</string>
+    <string name="refresh">Refresh</string>
+</resources>

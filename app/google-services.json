@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "281687415546",
+    "firebase_url": "https://bwmonitor-dae13.firebaseio.com",
+    "project_id": "bwmonitor-dae13",
+    "storage_bucket": "bwmonitor-dae13.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281687415546:android:db1a9f1c08d43bec",
+        "android_client_info": {
+          "package_name": "edu.illinois.ncsa.bwmonitor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "281687415546-87v53edosk0t8p038ku27itbiqi9l0pt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "edu.illinois.ncsa.bwmonitor",
+            "certificate_hash": "e03f5560462f4dbc4e9168db60b0c0f3d2f02daa"
+          }
+        },
+        {
+          "client_id": "281687415546-nl20qpr4m7tq0g8b0hol2pi30e8fuahg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByq5MEVw0ayRDG83bLNEwCq0wh_-J2ymA"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "281687415546-nl20qpr4m7tq0g8b0hol2pi30e8fuahg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
