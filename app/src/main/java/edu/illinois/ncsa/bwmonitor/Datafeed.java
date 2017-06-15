@@ -34,7 +34,7 @@ class Datafeed {
         this.response = null;
     }
 
-    String getID() {
+    String getTopic() {
         return this.title.replaceAll("\\s", "_");
     }
 }

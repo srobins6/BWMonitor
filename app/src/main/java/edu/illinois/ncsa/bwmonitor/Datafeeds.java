@@ -220,12 +220,12 @@ public class Datafeeds extends AppCompatActivity {
                     boolean checked = ((CheckBox) v).isChecked();
                     if (checked) {
                         if (datafeed.type.equals("notification")) {
-                            FirebaseMessaging.getInstance().subscribeToTopic(datafeed.getID());
+                            FirebaseMessaging.getInstance().subscribeToTopic(datafeed.getTopic());
                         }
                         subscribedDatafeeds.add(url);
                     } else {
                         if (datafeed.type.equals("notification")) {
-                            FirebaseMessaging.getInstance().unsubscribeFromTopic(datafeed.getID());
+                            FirebaseMessaging.getInstance().unsubscribeFromTopic(datafeed.getTopic());
                         }
                         subscribedDatafeeds.remove(url);
                     }
