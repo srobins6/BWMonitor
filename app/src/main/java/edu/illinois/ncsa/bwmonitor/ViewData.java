@@ -76,6 +76,184 @@ public class ViewData extends AppCompatActivity {
     private List<Datafeed> datafeeds;
     private RequestQueue queue;
 
+    private static void updateDatafeedView(final Datafeed datafeed, RequestQueue queue) {
+        final View rootView = datafeed.rootView;
+        if (rootView == null) {
+            return;
+        }
+        String datafeedURL = datafeed.url;
+        if (!datafeedURL.matches("https?://.*")) {
+            datafeedURL = "http://" + datafeedURL;
+        }
+        switch (datafeed.type) {
+            case "text": {
+                StringRequest stringRequest = new StringRequest(Request.Method.GET, datafeedURL, new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        if (datafeed.response == null || datafeed.response != response) {
+                            datafeed.response = response;
+                            TextView textView = (TextView) rootView.findViewById(R.id.datafeed_text);
+                            if (textView != null) {
+                                textView.setText(response);
+                            }
+                        }
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                    }
+                });
+                queue.add(stringRequest);
+                break;
+            }
+            case "html": {
+                final String finalDatafeedURL = datafeedURL;
+                StringRequest stringRequest = new StringRequest(Request.Method.GET, datafeedURL, new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        if (datafeed.response == null || datafeed.response != response) {
+                            datafeed.response = response;
+                            final WebView webView = (WebView) rootView.findViewById(R.id.datafeed_html);
+                            if (webView != null) {
+                                webView.loadUrl(finalDatafeedURL);
+                            }
+                        }
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                    }
+                });
+                queue.add(stringRequest);
+                break;
+            }
+            case "piechart": {
+                final PieChart pieChart = (PieChart) rootView.findViewById(R.id.datafeed_piechart);
+                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, datafeedURL, null, new Response.Listener<JSONArray>() {
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        if (datafeed.response == null || datafeed.response != response) {
+                            datafeed.response = response;
+                            try {
+                                updatePieChart(response, datafeed, pieChart);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                    }
+                });
+                queue.add(jsonArrayRequest);
+                break;
+            }
+            case "linechart": {
+                final LineChart lineChart = (LineChart) rootView.findViewById(R.id.datafeed_linechart);
+                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, datafeedURL, null, new Response.Listener<JSONArray>() {
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        if (datafeed.response == null || datafeed.response != response) {
+                            datafeed.response = response;
+                            try {
+                                updateLineChart(response, false, datafeed, lineChart);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                    }
+                });
+                queue.add(jsonArrayRequest);
+                break;
+            }
+            case "timechart": {
+                final LineChart lineChart = (LineChart) rootView.findViewById(R.id.datafeed_linechart);
+                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, datafeedURL, null, new Response.Listener<JSONArray>() {
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        if (datafeed.response == null || datafeed.response != response) {
+                            datafeed.response = response;
+                            try {
+                                updateLineChart(response, true, datafeed, lineChart);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                    }
+                });
+                queue.add(jsonArrayRequest);
+                break;
+            }
+        }
+    }
+
+    private static void updatePieChart(JSONArray response, Datafeed datafeed, PieChart mChart) throws JSONException {
+        List<PieEntry> entries = new ArrayList<>();
+        int length = response.length();
+        for (int i = 0; i < length; i++) {
+            float value = ((Number) response.get(i)).floatValue();
+            entries.add(new PieEntry(value, datafeed.fields.get(i)));
+        }
+        PieDataSet set = new PieDataSet(entries, datafeed.title);
+        set.setColors(ColorTemplate.VORDIPLOM_COLORS);
+        set.setValueTextSize(8f);
+        PieData data = new PieData(set);
+        mChart.setEntryLabelColor(Color.BLACK);
+        mChart.setEntryLabelTextSize(10f);
+        mChart.setDrawHoleEnabled(false);
+        mChart.setData(data);
+        mChart.setTouchEnabled(false);
+        Legend legend = mChart.getLegend();
+        legend.setEnabled(false);
+        mChart.invalidate();
+    }
+
+    private static void updateLineChart(JSONArray response, boolean timeChart, Datafeed datafeed, LineChart mChart) throws JSONException {
+        SparseArray<List<Entry>> entries = new SparseArray<>();
+        int length = response.length();
+        int fieldsLength = datafeed.fields.size();
+        for (int j = 1; j < fieldsLength; j++) {
+            entries.put(j, new ArrayList<Entry>());
+        }
+        for (int i = 0; i < length; i++) {
+            JSONArray dataPoint = response.getJSONArray(i);
+            float xValue = ((Number) dataPoint.get(0)).floatValue();
+            for (int j = 1; j < fieldsLength; j++) {
+                List<Entry> listEntries = entries.get(j);
+                float yValue = ((Number) dataPoint.get(j)).floatValue();
+                listEntries.add(new Entry(xValue, yValue));
+            }
+        }
+        List<ILineDataSet> dataSets = new ArrayList<>();
+        for (int j = 1; j < fieldsLength; j++) {
+            LineDataSet set = new LineDataSet(entries.get(j), datafeed.fields.get(j));
+            set.setValueTextSize(0);
+            dataSets.add(set);
+        }
+        mChart.getDescription().setPosition(0, 0);
+        LineData data = new LineData(dataSets);
+        Legend legend = mChart.getLegend();
+        legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.LEFT);
+        legend.setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
+        legend.setEnabled(true);
+        XAxis xAxis = mChart.getXAxis();
+        xAxis.setGranularity(1f);
+        if (timeChart) {
+            xAxis.setValueFormatter(new DateTimeFormatter());
+        }
+        mChart.setData(data);
+        mChart.invalidate();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         JodaTimeAndroid.init(this);
@@ -279,182 +457,17 @@ public class ViewData extends AppCompatActivity {
         }
     }
 
-    private static void updateDatafeedView(final Datafeed datafeed, RequestQueue queue) {
-        final View rootView = datafeed.rootView;
-        if (rootView == null) {
-            return;
-        }
-        String datafeedURL = datafeed.url;
-        if (!datafeedURL.matches("https?://.*")) {
-            datafeedURL = "http://" + datafeedURL;
-        }
-        switch (datafeed.type) {
-            case "text": {
-                StringRequest stringRequest = new StringRequest(Request.Method.GET, datafeedURL, new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        if (datafeed.response == null || datafeed.response != response) {
-                            datafeed.response = response;
-                            TextView textView = (TextView) rootView.findViewById(R.id.datafeed_text);
-                            if (textView != null) {
-                                textView.setText(response);
-                            }
-                        }
-                    }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                    }
-                });
-                queue.add(stringRequest);
-                break;
+    private static class DateTimeFormatter implements IAxisValueFormatter {
+        @Override
+        public String getFormattedValue(float value, AxisBase axis) {
+            LocalTime date = new DateTime((long) value * 1000).toLocalTime();
+            String hour = date.toString("h");
+            String minute = date.toString("m");
+            if (minute.length() < 2) {
+                minute = "0" + minute;
             }
-            case "html": {
-                final String finalDatafeedURL = datafeedURL;
-                StringRequest stringRequest = new StringRequest(Request.Method.GET, datafeedURL, new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        if (datafeed.response == null || datafeed.response != response) {
-                            datafeed.response = response;
-                            final WebView webView = (WebView) rootView.findViewById(R.id.datafeed_html);
-                            if (webView != null) {
-                                webView.loadUrl(finalDatafeedURL);
-                            }
-                        }
-                    }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                    }
-                });
-                queue.add(stringRequest);
-                break;
-            }
-            case "piechart": {
-                final PieChart pieChart = (PieChart) rootView.findViewById(R.id.datafeed_piechart);
-                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, datafeedURL, null, new Response.Listener<JSONArray>() {
-                    @Override
-                    public void onResponse(JSONArray response) {
-                        if (datafeed.response == null || datafeed.response != response) {
-                            datafeed.response = response;
-                            try {
-                                updatePieChart(response, datafeed, pieChart);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                    }
-                });
-                queue.add(jsonArrayRequest);
-                break;
-            }
-            case "linechart": {
-                final LineChart lineChart = (LineChart) rootView.findViewById(R.id.datafeed_linechart);
-                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, datafeedURL, null, new Response.Listener<JSONArray>() {
-                    @Override
-                    public void onResponse(JSONArray response) {
-                        if (datafeed.response == null || datafeed.response != response) {
-                            datafeed.response = response;
-                            try {
-                                lineChartUpdate(response, false, datafeed, lineChart);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                    }
-                });
-                queue.add(jsonArrayRequest);
-                break;
-            }
-            case "timechart": {
-                final LineChart lineChart = (LineChart) rootView.findViewById(R.id.datafeed_linechart);
-                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, datafeedURL, null, new Response.Listener<JSONArray>() {
-                    @Override
-                    public void onResponse(JSONArray response) {
-                        if (datafeed.response == null || datafeed.response != response) {
-                            datafeed.response = response;
-                            try {
-                                lineChartUpdate(response, true, datafeed, lineChart);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                    }
-                });
-                queue.add(jsonArrayRequest);
-                break;
-            }
+            return hour + ":" + minute + date.toString("a");
         }
-    }
-
-    private static void updatePieChart(JSONArray response, Datafeed datafeed, PieChart mChart) throws JSONException {
-        List<PieEntry> entries = new ArrayList<>();
-        int length = response.length();
-        for (int i = 0; i < length; i++) {
-            float value = ((Number) response.get(i)).floatValue();
-            entries.add(new PieEntry(value, datafeed.fields.get(i)));
-        }
-        PieDataSet set = new PieDataSet(entries, datafeed.title);
-        set.setColors(ColorTemplate.VORDIPLOM_COLORS);
-        set.setValueTextSize(8f);
-        PieData data = new PieData(set);
-        mChart.setEntryLabelColor(Color.BLACK);
-        mChart.setEntryLabelTextSize(10f);
-        mChart.setDrawHoleEnabled(false);
-        mChart.setData(data);
-        mChart.setTouchEnabled(false);
-        Legend legend = mChart.getLegend();
-        legend.setEnabled(false);
-        mChart.invalidate();
-    }
-
-    private static void lineChartUpdate(JSONArray response, boolean timeChart, Datafeed datafeed, LineChart mChart) throws JSONException {
-        SparseArray<List<Entry>> entries = new SparseArray<>();
-        int length = response.length();
-        int fieldsLength = datafeed.fields.size();
-        for (int j = 1; j < fieldsLength; j++) {
-            entries.put(j, new ArrayList<Entry>());
-        }
-        for (int i = 0; i < length; i++) {
-            JSONArray dataPoint = response.getJSONArray(i);
-            float xValue = ((Number) dataPoint.get(0)).floatValue();
-            for (int j = 1; j < fieldsLength; j++) {
-                List<Entry> listEntries = entries.get(j);
-                float yValue = ((Number) dataPoint.get(j)).floatValue();
-                listEntries.add(new Entry(xValue, yValue));
-            }
-        }
-        List<ILineDataSet> dataSets = new ArrayList<>();
-        for (int j = 1; j < fieldsLength; j++) {
-            LineDataSet set = new LineDataSet(entries.get(j), datafeed.fields.get(j));
-            set.setValueTextSize(0);
-            dataSets.add(set);
-        }
-        mChart.getDescription().setPosition(0, 0);
-        LineData data = new LineData(dataSets);
-        Legend legend = mChart.getLegend();
-        legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.LEFT);
-        legend.setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
-        legend.setEnabled(true);
-        XAxis xAxis = mChart.getXAxis();
-        xAxis.setGranularity(1f);
-        if (timeChart) {
-            xAxis.setValueFormatter(new DateTimeFormatter());
-        }
-        mChart.setData(data);
-        mChart.invalidate();
     }
 
     /**
@@ -481,19 +494,6 @@ public class ViewData extends AppCompatActivity {
         @Override
         public CharSequence getPageTitle(int position) {
             return datafeeds.get(position).title;
-        }
-    }
-
-    private static class DateTimeFormatter implements IAxisValueFormatter {
-        @Override
-        public String getFormattedValue(float value, AxisBase axis) {
-            LocalTime date = new DateTime((long) value * 1000).toLocalTime();
-            String hour = date.toString("h");
-            String minute = date.toString("m");
-            if (minute.length() < 2) {
-                minute = "0" + minute;
-            }
-            return hour + ":" + minute + date.toString("a");
         }
     }
 }
